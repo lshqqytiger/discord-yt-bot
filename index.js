@@ -1,6 +1,7 @@
 const ytdl = require("discord-ytdl-core");
 const Discord = require("discord.js");
 const client = new Discord.Client();
+const config = require("./config.json");
 
 let nowPlaying = {};
 let queue = [];
@@ -87,4 +88,4 @@ client.on("message", (msg) => {
   }
 });
 
-client.login("ODg3MjI5ODg5MjczNTQ0NzU2.YUBHOQ.6W59mFuQLOuvMVfdzEeBjncQvA4");
+client.login(config.token);
