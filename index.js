@@ -6,6 +6,7 @@ const config = require("./config.json");
 let nowPlaying = {};
 let queue = [];
 let voiceChannel;
+let connection;
 
 const removeQueue = (target) => {
   const arr = [];
@@ -48,10 +49,9 @@ client.on("message", (msg) => {
     queue.push(msg.content.substring(3));
     msg.channel.send("큐에 추가되었습니다.");
 
-    voiceChannel = msg.member.voice.channel;
-
     if (!nowPlaying.dispatcher) {
-      msg.member.voice.channel.join().then((connection) => {
+      msg.member.voice.channel.join().then((_) => {
+		connection = _;
         play();
       });
     }
@@ -66,7 +66,7 @@ client.on("message", (msg) => {
     nowPlaying.dispatcher.destroy();
     nowPlaying = {};
     queue = [];
-    voiceChannel.leave();
+    msg.member.voice.channel.leave();
   } else if (msg.content.startsWith("!rq")) {
     if (msg.content.substring(3) == 0) {
       return msg.channel.send(
