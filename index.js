@@ -5,7 +5,6 @@ const config = require("./config.json");
 
 let nowPlaying = {};
 let queue = [];
-let voiceChannel;
 let connection;
 
 const removeQueue = (target) => {
@@ -34,6 +33,7 @@ const play = () => {
         }
       }
     });
+  nowPlaying.dispatcher.setVolume(nowPlaying.volume || 1);
 };
 
 client.on("ready", () => {
@@ -42,7 +42,7 @@ client.on("ready", () => {
 
 client.on("message", (msg) => {
   if (msg.author.bot || !msg.guild) return;
-  if (msg.content.startsWith("!p")) {
+  if (msg.content.startsWith("!p") || msg.content.startsWith("!pp")) {
     if (!msg.member.voice.channel)
       return msg.channel.send("음성 채널에 접속 후 사용할 수 있습니다.");
 
@@ -51,7 +51,7 @@ client.on("message", (msg) => {
 
     if (!nowPlaying.dispatcher) {
       msg.member.voice.channel.join().then((_) => {
-		connection = _;
+        connection = _;
         play();
       });
     }
@@ -63,10 +63,10 @@ client.on("message", (msg) => {
     text += "```";
     return msg.channel.send(text);
   } else if (msg.content.startsWith("!l")) {
-    nowPlaying.dispatcher.destroy();
+    if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
     nowPlaying = {};
     queue = [];
-    msg.member.voice.channel.leave();
+    msg.guild.voice.channel.leave();
   } else if (msg.content.startsWith("!rq")) {
     if (msg.content.substring(3) == 0) {
       return msg.channel.send(
@@ -82,9 +82,23 @@ client.on("message", (msg) => {
     if (queue[0]) {
       play();
     } else {
-      nowPlaying.dispatcher.destroy();
+      if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
       nowPlaying = {};
     }
+  } else if (msg.content.startsWith("!v")) {
+    nowPlaying.volume = Number(msg.content.substring(3));
+    if (nowPlaying.dispatcher)
+      nowPlaying.dispatcher.setVolume(nowPlaying.volume || 1);
+    else
+      return msg.channel.send(
+        "음악이 재생되기 전에는 볼륨을 설정할 수 없습니다."
+      );
+
+    return msg.channel.send(
+      `볼륨을 ${msg.content.substring(3)}(${
+        Number(msg.content.substring(3)) * 100
+      }%)로 설정했습니다.`
+    );
   }
 });
 
