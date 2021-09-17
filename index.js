@@ -43,6 +43,12 @@ client.on("ready", () => {
 client.on("message", (msg) => {
   if (msg.author.bot || !msg.guild) return;
   if (msg.content.startsWith("!pause")) {
+    if (!nowPlaying.paused)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("이미 일시 정지 상태입니다.")
+      );
     nowPlaying.paused = true;
     nowPlaying.dispatcher.pause();
     return msg.channel.send(
@@ -83,31 +89,32 @@ client.on("message", (msg) => {
       new Discord.MessageEmbed().setTitle("현재 큐 목록").setDescription(text)
     );
   } else if (msg.content.startsWith("!np")) {
-    let embed = new Discord.MessageEmbed().setTitle("현재 재생 정보").addFields(
-      {
-        name: "상태",
-        value: !nowPlaying.dispatcher
-          ? "정지됨"
-          : nowPlaying.paused
-          ? "일시 정지됨"
-          : "재생 중",
-      },
-      {
-        name: "곡 URL",
-        value: queue[0] || "재생 중이 아님",
-      },
-      {
-        name: "반복",
-        value: nowPlaying.loop ? "켬" : "끔",
-      },
-      {
-        name: "볼륨",
-        value: nowPlaying.volume
-          ? `${nowPlaying.volume} (${nowPlaying.volume * 100}%)`
-          : "재생 중이 아님",
-      }
+    return msg.channel.send(
+      new Discord.MessageEmbed().setTitle("현재 재생 정보").addFields(
+        {
+          name: "상태",
+          value: !nowPlaying.dispatcher
+            ? "정지됨"
+            : nowPlaying.paused
+            ? "일시 정지됨"
+            : "재생 중",
+        },
+        {
+          name: "곡 URL",
+          value: queue[0] || "재생 중이 아님",
+        },
+        {
+          name: "반복",
+          value: nowPlaying.loop ? "켬" : "끔",
+        },
+        {
+          name: "볼륨",
+          value: nowPlaying.volume
+            ? `${nowPlaying.volume} (${nowPlaying.volume * 100}%)`
+            : "재생 중이 아님",
+        }
+      )
     );
-    return msg.channel.send(embed);
   } else if (msg.content.startsWith("!leave")) {
     if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
     nowPlaying = {};
@@ -171,6 +178,12 @@ client.on("message", (msg) => {
         )
     );
   } else if (msg.content.startsWith("!resume")) {
+    if (!nowPlaying.paused)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("이미 재생 중입니다.")
+      );
     nowPlaying.paused = false;
     nowPlaying.dispatcher.resume();
     return msg.channel.send(
