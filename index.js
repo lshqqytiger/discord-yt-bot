@@ -17,15 +17,12 @@ const removeQueue = (target) => {
 };
 
 const play = () => {
-  nowPlaying.stream = ytdl(queue[0], {
-    filter: "audioonly",
-    opusEncoded: true,
-    encoderArgs: ["-af", "bass=g=10,dynaudnorm=f=200"],
-  });
+  nowPlaying.stream = ytdl(queue[0], config.ytdlConfig);
   nowPlaying.dispatcher = connection
-    .play(nowPlaying.stream, { type: "opus" })
+    .play(nowPlaying.stream, { type: config.dispatcherType })
     .on("speaking", (speaking) => {
       if (!speaking) {
+        if (nowPlaying.paused) return;
         if (nowPlaying.loop) return play();
         removeQueue(0);
         if (queue.length) play();
@@ -34,7 +31,9 @@ const play = () => {
         }
       }
     });
-  nowPlaying.dispatcher.setVolume(nowPlaying.volume || 1);
+  nowPlaying.dispatcher.setVolume(
+    nowPlaying.volume || (nowPlaying.volume = config.defaultVolume)
+  );
 };
 
 client.on("ready", () => {

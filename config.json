@@ -1,3 +1,11 @@
 {
-  "token": "YOUR TOKEN HERE"
+  "token": "YOUR TOKEN HERE",
+
+  "defaultVolume": 0.5,
+  "ytdlConfig": {
+    "filter": "audioonly",
+    "opusEncoded": true,
+    "encoderArgs": ["-af", "bass=g=10,dynaudnorm=f=200"]
+  },
+  "dispatcherType": "opus"
 }
