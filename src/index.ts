@@ -21,8 +21,12 @@ const removeQueue = (target) => {
 
 const play = () => {
   if (!connection)
-    return console.error(
-      "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
+    return msg.channel.send(
+      new Discord.MessageEmbed()
+        .setTitle("오류!")
+        .setDescription(
+          "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
+        )
     );
 
   nowPlaying.stream = ytdl(queue[0], config.ytdlConfig);
