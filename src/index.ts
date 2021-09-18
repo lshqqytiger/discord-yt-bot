@@ -1,16 +1,32 @@
-const ytdl = require("discord-ytdl-core");
-const yts = require("yt-search");
-const Discord = require("discord.js");
-const Disbut = require("discord-buttons");
+import ytdl from "discord-ytdl-core";
+import yts from "yt-search";
+import Discord, { StreamType, StreamDispatcher } from "discord.js";
+import Disbut, { MessageActionRow, MessageButton } from "discord-buttons";
+
+import config from "./config.json";
+
 const client = new Discord.Client();
-const config = require("./config.json");
 
-let nowPlaying = {};
-let queue = [];
-let connection;
-let searchResults = [];
+type player = {
+  stream: any;
+  dispatcher: StreamDispatcher | null;
+  paused: boolean;
+  loop: boolean;
+  volume: number;
+};
 
-const removeQueue = (target) => {
+let nowPlaying: player = {
+  stream: null,
+  dispatcher: null,
+  paused: false,
+  loop: false,
+  volume: config.defaultVolume,
+};
+let queue: Array<any> = [];
+let connection: Discord.VoiceConnection;
+let searchResults: Array<any> = [];
+
+const removeQueue = (target: string | number) => {
   const arr = [];
   for (let i in queue) {
     if (i == target) continue;
@@ -21,17 +37,17 @@ const removeQueue = (target) => {
 
 const play = () => {
   if (!connection)
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("오류!")
-        .setDescription(
-          "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
-        )
+    return console.error(
+      "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
     );
 
-  nowPlaying.stream = ytdl(queue[0], config.ytdlConfig);
+  nowPlaying.stream = ytdl(queue[0], {
+    filter: "audioonly",
+    opusEncoded: true,
+    encoderArgs: ["-af", "bass=g=10,dynaudnorm=f=200"],
+  });
   nowPlaying.dispatcher = connection
-    .play(nowPlaying.stream, { type: config.dispatcherType })
+    .play(nowPlaying.stream, { type: config.dispatcherType as StreamType })
     .on("speaking", (speaking) => {
       if (!speaking) {
         if (nowPlaying.paused) return;
@@ -39,13 +55,17 @@ const play = () => {
         removeQueue(0);
         if (queue.length) play();
         else {
-          nowPlaying = {};
+          nowPlaying = {
+            stream: null,
+            dispatcher: null,
+            paused: false,
+            loop: false,
+            volume: config.defaultVolume,
+          };
         }
       }
     });
-  nowPlaying.dispatcher.setVolume(
-    nowPlaying.volume || (nowPlaying.volume = config.defaultVolume)
-  );
+  nowPlaying.dispatcher.setVolume(nowPlaying.volume);
 };
 
 Disbut(client);
@@ -63,6 +83,12 @@ client.on("message", async (msg) => {
           .setTitle("오류!")
           .setDescription("이미 일시 정지 상태입니다.")
       );
+    if (!nowPlaying.dispatcher)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("재생 중이 아닙니다.")
+      );
     nowPlaying.paused = true;
     nowPlaying.dispatcher.pause();
     return msg.channel.send(
@@ -71,7 +97,7 @@ client.on("message", async (msg) => {
         .setDescription("재생 중인 곡을 일시 정지했습니다.")
     );
   } else if (msg.content.startsWith("!p")) {
-    if (!msg.member.voice.channel)
+    if (!msg.member?.voice.channel)
       return msg.channel.send(
         new Discord.MessageEmbed()
           .setTitle("오류!")
@@ -88,7 +114,7 @@ client.on("message", async (msg) => {
           .setDescription(`${url}`)
       );
     } else {
-      msg.member.voice.channel.join().then((_) => {
+      msg.member?.voice.channel.join().then((_) => {
         connection = _;
       });
       searchResults = (
@@ -102,16 +128,18 @@ client.on("message", async (msg) => {
         );
 
       let text = "";
-      let row = new Disbut.MessageActionRow();
+      let row = new MessageActionRow();
 
       for (let i in searchResults) {
-        i = Number(i);
-        if (i == 5) break;
-        text += `${i + 1} [${searchResults[i].title}](${
-          searchResults[i].url
+        if (i == "5") break;
+
+        let index = Number(i);
+
+        text += `${index + 1} [${searchResults[index].title}](${
+          searchResults[index].url
         })\n`;
         row.addComponents(
-          new Disbut.MessageButton()
+          new MessageButton()
             .setLabel(i + 1)
             .setStyle("blurple")
             .setID(`searchResult${i}`)
@@ -124,7 +152,7 @@ client.on("message", async (msg) => {
       );
     }
     if (!nowPlaying.dispatcher && queue[0]) {
-      msg.member.voice.channel.join().then((_) => {
+      msg.member?.voice.channel.join().then((_) => {
         connection = _;
         play();
       });
@@ -166,10 +194,16 @@ client.on("message", async (msg) => {
       )
     );
   } else if (msg.content.startsWith("!leave")) {
-    if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
-    nowPlaying = {};
+    if (nowPlaying.dispatcher) nowPlaying.dispatcher = null;
+    nowPlaying = {
+      stream: null,
+      dispatcher: null,
+      paused: false,
+      loop: false,
+      volume: config.defaultVolume,
+    };
     queue = [];
-    msg.guild.voice.channel.leave();
+    msg.guild.voice?.channel?.leave();
   } else if (msg.content.startsWith("!l")) {
     nowPlaying.loop = !nowPlaying.loop;
 
@@ -179,7 +213,7 @@ client.on("message", async (msg) => {
         .setDescription(`곡 반복을 ${nowPlaying.loop ? "켰" : "껐"}습니다.`)
     );
   } else if (msg.content.startsWith("!rq")) {
-    if (msg.content.substring(3) == 0) {
+    if (msg.content.substring(3) == "0") {
       return msg.channel.send(
         new Discord.MessageEmbed()
           .setTitle("오류!")
@@ -198,8 +232,14 @@ client.on("message", async (msg) => {
     removeQueue(0);
     if (queue[0]) play();
     else {
-      if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
-      nowPlaying = {};
+      if (nowPlaying.dispatcher) nowPlaying.dispatcher = null;
+      nowPlaying = {
+        stream: null,
+        dispatcher: null,
+        paused: false,
+        loop: false,
+        volume: config.defaultVolume,
+      };
     }
     return msg.channel.send(
       new Discord.MessageEmbed()
@@ -233,6 +273,12 @@ client.on("message", async (msg) => {
         new Discord.MessageEmbed()
           .setTitle("오류!")
           .setDescription("이미 재생 중입니다.")
+      );
+    if (!nowPlaying.dispatcher)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("재생 중이 아닙니다.")
       );
     nowPlaying.paused = false;
     nowPlaying.dispatcher.resume();
@@ -285,11 +331,11 @@ client.on("message", async (msg) => {
   }
 });
 client.on("clickButton", async (button) => {
-  queue.push(searchResults[button.id.substring(12)].url);
+  queue.push(searchResults[Number(button.id.substring(12))].url);
   button.reply.send(
     new Discord.MessageEmbed()
       .setTitle("곡 추가됨")
-      .setDescription(`${searchResults[button.id.substring(12)].title}`)
+      .setDescription(`${searchResults[Number(button.id.substring(12))].title}`)
   );
   if (!nowPlaying.dispatcher) play();
 });

@@ -1,0 +1,6 @@
+{
+  "token": "YOUR TOKEN HERE",
+
+  "defaultVolume": 0.5,
+  "dispatcherType": "opus"
+}
