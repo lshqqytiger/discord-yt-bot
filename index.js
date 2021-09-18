@@ -59,6 +59,12 @@ client.on("message", async (msg) => {
           .setTitle("오류!")
           .setDescription("이미 일시 정지 상태입니다.")
       );
+    if (!nowPlaying.dispatcher)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("재생 중이 아닙니다.")
+      );
     nowPlaying.paused = true;
     nowPlaying.dispatcher.pause();
     return msg.channel.send(
@@ -101,8 +107,9 @@ client.on("message", async (msg) => {
       let row = new Disbut.MessageActionRow();
 
       for (let i in searchResults) {
+        if (i == "5") break;
+
         i = Number(i);
-        if (i == 5) break;
         text += `${i + 1} [${searchResults[i].title}](${
           searchResults[i].url
         })\n`;
@@ -229,6 +236,12 @@ client.on("message", async (msg) => {
         new Discord.MessageEmbed()
           .setTitle("오류!")
           .setDescription("이미 재생 중입니다.")
+      );
+    if (!nowPlaying.dispatcher)
+      return msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("오류!")
+          .setDescription("재생 중이 아닙니다.")
       );
     nowPlaying.paused = false;
     nowPlaying.dispatcher.resume();
