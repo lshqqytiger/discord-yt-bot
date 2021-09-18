@@ -61,7 +61,7 @@ client.on("ready", () => {
 client.on("message", async (msg) => {
   if (msg.author.bot || !msg.guild) return;
   if (msg.content.startsWith("!pause")) {
-    if (!nowPlaying.paused)
+    if (nowPlaying.paused)
       return sendEmbed(msg.channel, "오류!", "이미 일시 정지 상태입니다.");
 
     if (!nowPlaying.dispatcher)
