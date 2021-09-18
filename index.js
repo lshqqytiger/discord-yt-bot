@@ -1,11 +1,14 @@
 const ytdl = require("discord-ytdl-core");
+const yts = require("yt-search");
 const Discord = require("discord.js");
+const Disbut = require("discord-buttons");
 const client = new Discord.Client();
 const config = require("./config.json");
 
 let nowPlaying = {};
 let queue = [];
 let connection;
+let searchResults = [];
 
 const removeQueue = (target) => {
   const arr = [];
@@ -17,6 +20,15 @@ const removeQueue = (target) => {
 };
 
 const play = () => {
+  if (!connection)
+    return msg.channel.send(
+      new Discord.MessageEmbed()
+        .setTitle("오류!")
+        .setDescription(
+          "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
+        )
+    );
+
   nowPlaying.stream = ytdl(queue[0], config.ytdlConfig);
   nowPlaying.dispatcher = connection
     .play(nowPlaying.stream, { type: config.dispatcherType })
@@ -36,11 +48,13 @@ const play = () => {
   );
 };
 
+Disbut(client);
+
 client.on("ready", () => {
   console.log("ready");
 });
 
-client.on("message", (msg) => {
+client.on("message", async (msg) => {
   if (msg.author.bot || !msg.guild) return;
   if (msg.content.startsWith("!pause")) {
     if (!nowPlaying.paused)
@@ -64,16 +78,52 @@ client.on("message", (msg) => {
           .setDescription("음성 채널 접속 후 사용하실 수 있습니다.")
       );
 
-    let url = msg.content.substring(msg.content.startsWith("!pp") ? 4 : 3);
+    if (msg.content.includes("youtube.com/watch?v=")) {
+      const url = msg.content.substring(msg.content.startsWith("!pp") ? 4 : 3);
 
-    queue.push(url);
-    msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("큐에 추가됨")
-        .setDescription(`${url}`)
-    );
+      queue.push(url);
+      msg.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("곡 추가됨")
+          .setDescription(`${url}`)
+      );
+    } else {
+      msg.member.voice.channel.join().then((_) => {
+        connection = _;
+      });
+      searchResults = (
+        await yts(msg.content.substring(msg.content.startsWith("!pp") ? 4 : 3))
+      ).videos;
+      if (!searchResults.length)
+        return msg.channel.send(
+          new Discord.MessageEmbed()
+            .setTitle("검색 결과")
+            .setDescription("검색 결과가 없습니다.")
+        );
 
-    if (!nowPlaying.dispatcher) {
+      let text = "";
+      let row = new Disbut.MessageActionRow();
+
+      for (let i in searchResults) {
+        i = Number(i);
+        if (i == 5) break;
+        text += `${i + 1} [${searchResults[i].title}](${
+          searchResults[i].url
+        })\n`;
+        row.addComponents(
+          new Disbut.MessageButton()
+            .setLabel(i + 1)
+            .setStyle("blurple")
+            .setID(`searchResult${i}`)
+        );
+      }
+
+      msg.channel.send(
+        new Discord.MessageEmbed().setTitle("검색 결과").setDescription(text),
+        row
+      );
+    }
+    if (!nowPlaying.dispatcher && queue[0]) {
       msg.member.voice.channel.join().then((_) => {
         connection = _;
         play();
@@ -198,7 +248,8 @@ client.on("message", (msg) => {
         .addFields(
           {
             name: "!p !pp",
-            value: "큐에 곡을 추가합니다.",
+            value:
+              "큐에 곡을 추가합니다.\n유튜브 URL을 직접 입력하거나 검색어를 입력합니다.",
           },
           {
             name: "!q",
@@ -232,6 +283,15 @@ client.on("message", (msg) => {
         .setFooter("Copyright (c) 2021 베프")
     );
   }
+});
+client.on("clickButton", async (button) => {
+  queue.push(searchResults[button.id.substring(12)].url);
+  button.reply.send(
+    new Discord.MessageEmbed()
+      .setTitle("곡 추가됨")
+      .setDescription(`${searchResults[button.id.substring(12)].title}`)
+  );
+  if (!nowPlaying.dispatcher) play();
 });
 
 client.login(config.token);

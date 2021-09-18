@@ -9,10 +9,12 @@
   "author": "베프",
   "license": "MIT",
   "dependencies": {
+    "discord-buttons": "^4.0.0",
     "discord-ytdl-core": "^5.0.4",
     "discord.js": "^12.5.3",
     "ffmpeg-static": "^4.4.0",
     "opusscript": "0.0.8",
+    "yt-search": "^2.10.1",
     "ytdl-core": "^4.9.1"
   }
 }
