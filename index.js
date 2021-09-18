@@ -19,6 +19,12 @@ const removeQueue = (target) => {
   queue = arr;
 };
 
+const sendEmbed = (channel, title, description) => {
+  return channel.send(
+    new Discord.MessageEmbed().setTitle(title).setDescription(description)
+  );
+};
+
 const play = () => {
   if (!connection)
     return console.error(
@@ -54,41 +60,31 @@ client.on("message", async (msg) => {
   if (msg.author.bot || !msg.guild) return;
   if (msg.content.startsWith("!pause")) {
     if (!nowPlaying.paused)
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("이미 일시 정지 상태입니다.")
-      );
+      return sendEmbed(msg.channel, "오류!", "이미 일시 정지 상태입니다.");
+
     if (!nowPlaying.dispatcher)
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("재생 중이 아닙니다.")
-      );
+      return sendEmbed(msg.channel, "오류!", "재생 중이 아닙니다.");
+
     nowPlaying.paused = true;
     nowPlaying.dispatcher.pause();
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("일시 정지")
-        .setDescription("재생 중인 곡을 일시 정지했습니다.")
+    return sendEmbed(
+      msg.channel,
+      "일시 정지",
+      "재생 중인 곡을 일시 정지했습니다."
     );
   } else if (msg.content.startsWith("!p")) {
     if (!msg.member.voice.channel)
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("음성 채널 접속 후 사용하실 수 있습니다.")
+      return sendEmbed(
+        msg.channel,
+        "오류!",
+        "음성 채널 접속 후 사용하실 수 있습니다."
       );
 
     if (msg.content.includes("youtube.com/watch?v=")) {
       const url = msg.content.substring(msg.content.startsWith("!pp") ? 4 : 3);
 
       queue.push(url);
-      msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("곡 추가됨")
-          .setDescription(`${url}`)
-      );
+      sendEmbed(msg.channel, "곡 추가됨", url);
     } else {
       msg.member.voice.channel.join().then((_) => {
         connection = _;
@@ -97,11 +93,7 @@ client.on("message", async (msg) => {
         await yts(msg.content.substring(msg.content.startsWith("!pp") ? 4 : 3))
       ).videos;
       if (!searchResults.length)
-        return msg.channel.send(
-          new Discord.MessageEmbed()
-            .setTitle("검색 결과")
-            .setDescription("검색 결과가 없습니다.")
-        );
+        return sendEmbed(msg.channel, "검색 결과", "검색 결과가 없습니다.");
 
       let text = "";
       let row = new Disbut.MessageActionRow();
@@ -138,9 +130,7 @@ client.on("message", async (msg) => {
       text += `${i} ${i == "0" ? "→" : ""} ${queue[i]}\n`;
     }
     text += "```";
-    return msg.channel.send(
-      new Discord.MessageEmbed().setTitle("현재 큐 목록").setDescription(text)
-    );
+    return sendEmbed(msg.channel, "현재 큐 목록", text);
   } else if (msg.content.startsWith("!np")) {
     return msg.channel.send(
       new Discord.MessageEmbed().setTitle("현재 재생 정보").addFields(
@@ -173,29 +163,33 @@ client.on("message", async (msg) => {
     nowPlaying = {};
     queue = [];
     msg.guild.voice.channel.leave();
+    return sendEmbed(
+      msg.channel,
+      "음성 채널 나감",
+      "음성 채널을 나가고 큐를 초기화했습니다."
+    );
   } else if (msg.content.startsWith("!l")) {
     nowPlaying.loop = !nowPlaying.loop;
 
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("곡 반복")
-        .setDescription(`곡 반복을 ${nowPlaying.loop ? "켰" : "껐"}습니다.`)
+    return sendEmbed(
+      msg.channel,
+      "곡 반복",
+      `곡 반복을 ${nowPlaying.loop ? "켰" : "껐"}습니다.`
     );
   } else if (msg.content.startsWith("!rq")) {
-    if (msg.content.substring(3) == 0) {
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("현재 재생 중인 큐를 건너뛰려면 !n를 사용해주세요.")
+    if (msg.content.substring(3) == 0)
+      return sendEmbed(
+        msg.channel,
+        "오류!",
+        "현재 재생 중인 큐를 건너뛰려면 !n를 사용해주세요."
       );
-    }
 
     removeQueue(msg.content.substring(4));
 
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("곡 제거됨")
-        .setDescription(`${msg.content.substring(4)}번 큐를 제거했습니다.`)
+    return sendEmbed(
+      msg.channel,
+      "곡 제거됨",
+      `${msg.content.substring(4)}번 큐를 제거했습니다.`
     );
   } else if (msg.content.startsWith("!n")) {
     removeQueue(0);
@@ -204,14 +198,12 @@ client.on("message", async (msg) => {
       if (nowPlaying.dispatcher) nowPlaying.dispatcher.destroy();
       nowPlaying = {};
     }
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("다음 곡 재생")
-        .setDescription(
-          queue[0]
-            ? `다음 곡으로 넘어갑니다.\n현재 재생 중: ${queue[0]}`
-            : "넘어갈 다음 곡이 큐에 없어 재생을 종료합니다.\n!p 또는 !pp 명령어를 사용해 큐에 곡을 추가해주세요."
-        )
+    return sendEmbed(
+      msg.channel,
+      "다음 곡 재생",
+      queue[0]
+        ? `다음 곡으로 넘어갑니다.\n현재 재생 중: ${queue[0]}`
+        : "넘어갈 다음 곡이 큐에 없어 재생을 종료합니다.\n!p 또는 !pp 명령어를 사용해 큐에 곡을 추가해주세요."
     );
   } else if (msg.content.startsWith("!v")) {
     nowPlaying.volume = Number(msg.content.substring(3));
@@ -219,36 +211,28 @@ client.on("message", async (msg) => {
     if (nowPlaying.dispatcher)
       nowPlaying.dispatcher.setVolume(nowPlaying.volume || 1);
 
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle(nowPlaying.dispatcher ? "볼륨 설정" : "오류!")
-        .setDescription(
-          nowPlaying.dispatcher
-            ? `볼륨을 ${msg.content.substring(3)}(${
-                Number(msg.content.substring(3)) * 100
-              }%)로 설정했습니다.`
-            : "음악이 재생되기 전에는 볼륨을 설정할 수 없습니다."
-        )
+    return sendEmbed(
+      msg.channel,
+      nowPlaying.dispatcher ? "볼륨 설정" : "오류!",
+      nowPlaying.dispatcher
+        ? `볼륨을 ${msg.content.substring(3)}(${
+            Number(msg.content.substring(3)) * 100
+          }%)로 설정했습니다.`
+        : "음악이 재생되기 전에는 볼륨을 설정할 수 없습니다."
     );
   } else if (msg.content.startsWith("!resume")) {
     if (!nowPlaying.paused)
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("이미 재생 중입니다.")
-      );
+      return sendEmbed(msg.channel, "오류!", "이미 재생 중입니다.");
+
     if (!nowPlaying.dispatcher)
-      return msg.channel.send(
-        new Discord.MessageEmbed()
-          .setTitle("오류!")
-          .setDescription("재생 중이 아닙니다.")
-      );
+      return sendEmbed(msg.channel, "오류!", "재생 중이 아닙니다.");
+
     nowPlaying.paused = false;
     nowPlaying.dispatcher.resume();
-    return msg.channel.send(
-      new Discord.MessageEmbed()
-        .setTitle("일시 정지 해제")
-        .setDescription("재생 중인 곡을 일시 정지 해제했습니다.")
+    return sendEmbed(
+      msg.channel,
+      "일시 정지 해제",
+      "재생 중인 곡을 일시 정지 해제했습니다."
     );
   } else if (msg.content.startsWith("!help")) {
     return msg.channel.send(
@@ -295,10 +279,10 @@ client.on("message", async (msg) => {
 });
 client.on("clickButton", async (button) => {
   queue.push(searchResults[button.id.substring(12)].url);
-  button.reply.send(
-    new Discord.MessageEmbed()
-      .setTitle("곡 추가됨")
-      .setDescription(`${searchResults[button.id.substring(12)].title}`)
+  sendEmbed(
+    button.reply,
+    "곡 추가됨",
+    `${searchResults[button.id.substring(12)].title}`
   );
   if (!nowPlaying.dispatcher) play();
 });
