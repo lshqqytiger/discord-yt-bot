@@ -31,7 +31,9 @@ const play = () => {
       "봇이 음성 채널과 연결되어 있지 않아 재생에 실패했습니다."
     );
 
-  nowPlaying.stream = ytdl(queue[0], config.ytdlConfig);
+  nowPlaying.stream = ytdl(queue[0], config.ytdlConfig).on("info", (info) => {
+    nowPlaying.info = info.player_response.videoDetails;
+  });
   nowPlaying.dispatcher = connection
     .play(nowPlaying.stream, { type: config.dispatcherType })
     .on("speaking", (speaking) => {
@@ -141,6 +143,10 @@ client.on("message", async (msg) => {
             : nowPlaying.paused
             ? "일시 정지됨"
             : "재생 중",
+        },
+        {
+          name: "곡 제목",
+          value: nowPlaying.info ? nowPlaying.info.title : "재생 중이 아님",
         },
         {
           name: "곡 URL",
